@@ -21,10 +21,12 @@ jsonparse(JSON, jsonarray(ParsedArray)) :-
 %% DEFINING PRIMITIVES
 boolean(true).
 boolean(false).
+nullable(null).
 
 jsonprimitive(P, P) :- boolean(P), !.
 jsonprimitive(P, P) :- string(P), !.
 jsonprimitive(P, P) :- number(P), !.
+jsonprimitive(P, P) :- nullable(P), !.
 jsonprimitive(P, ParsedP) :- 
     jsonparse(P, ParsedP), !.
 
