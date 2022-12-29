@@ -108,12 +108,27 @@ t(V) :- nb_getval(test,V).
 
 
 %%% JSONREAD/2
-%% jsonread(-JSON, +Filename)
-jsonread(JSON, FileName) :-
+%% jsonread(+Filename, -JSON)
+jsonread(FileName, JSON) :-
     var(JSON),
     nonvar(FileName),
     access_file(FileName, read),
     read_file_to_string(FileName, Unparsed, []),
     jsonparse(Unparsed, JSON).
 
+%% JSONDUMP/2
+%% jsondump(+JSON, +FileName)
+jsondump(JSON, FileName) :-
+    nonvar(JSON),
+    nonvar(FileName),
+    access_file(FileName, write),
+    jsonparse(RealJSON, JSON),
+    term_string(RealJSON, StringifiedJSON),
+    open(FileName, write, OutputStream, []),
+    write(OutputStream, StringifiedJSON),
+    close(OutputStream).
 
+
+%%% DEMOS
+% jsonread("./testing/input.json", J), jsondump(J, "./testing/output.json").
+% jsonread("./testing/input.json", J), jsondump(J, "./testing/output.json"), jsonread("./testing/input.json", J).
