@@ -1,0 +1,6 @@
+JSONPARSE
+fix special characters parsing
+
+JSONACCESS
+jsonaccess(jsonarray(_), [], _) ----> FALSE
+
