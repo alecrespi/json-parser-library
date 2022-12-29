@@ -1,3 +1,7 @@
+%%%% DEPENDENCIES
+:- use_module(library(readutil)).
+%%%%
+
 
 %%% JSONPARSE/2 IMPLEMENTATION
 
@@ -106,5 +110,10 @@ t(V) :- nb_getval(test,V).
 %%% JSONREAD/2
 %% jsonread(-JSON, +Filename)
 jsonread(JSON, FileName) :-
-    nonvar(JSON),
-    var(FileName),
+    var(JSON),
+    nonvar(FileName),
+    access_file(FileName, read),
+    read_file_to_string(FileName, Unparsed, []),
+    jsonparse(Unparsed, JSON).
+
+
