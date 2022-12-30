@@ -2,10 +2,7 @@
 :- use_module(library(readutil)).
 %%%%
 
-
-%%%%%%%%%%%%%%%%%%%%
-%%%  JSONPARSE/2 %%%
-%%%%%%%%%%%%%%%%%%%%
+%%%  JSONPARSE/2
 jsonparse({}, jsonobj([])) :- !.
 jsonparse([], jsonarray([])) :- !.
 
@@ -32,10 +29,7 @@ jsonparse(JSON, jsonarray(ParsedArray)) :-
     jsonarray(JSON, ParsedArray), !.
 
 
-
-%%%%%%%%%%%%%%%%%%%%
-%%% JSONACCESS/3 %%%
-%%%%%%%%%%%%%%%%%%%%
+%%% JSONACCESS/3
  
 jsonparsable(jsonobj(JSON)) :-
     jsonobj(_,JSON), !.
@@ -48,7 +42,7 @@ jsonparsable(JSON) :-
 jsonaccess(JSON, [], JSON) :- 
     jsonparsable(JSON), !.
 
-%handle objects
+% handle objects
 jsonaccess(jsonobj(Object), [Key | Pattern], Result) :-
     string(Key),
     memberchk((Key, Content), Object),
@@ -69,9 +63,7 @@ jsonaccess(JSON, OneStepPattern, Result) :-
 
 
 
-%%%%%%%%%%%%%%%%%%%%
-%%%  JSONREAD/2  %%%
-%%%%%%%%%%%%%%%%%%%%
+%%%  JSONREAD/2  
 %% jsonread(+Filename, -JSON)
 jsonread(FileName, JSON) :-
     var(JSON),
@@ -82,9 +74,8 @@ jsonread(FileName, JSON) :-
 
 
 
-%%%%%%%%%%%%%%%%%%%%
-%%%  JSONDUMP/2  %%%
-%%%%%%%%%%%%%%%%%%%%
+
+%%%  JSONDUMP/2
 %% jsondump(+JSON, +FileName)
 jsondump(JSON, FileName) :-
     nonvar(JSON),
@@ -100,10 +91,9 @@ jsondump(JSON, FileName) :-
 
 
 
-%%%%%%%%%%%%%%%%%%%%
-%%% <PRIMITIVES> %%%
-%%%%%%%%%%%%%%%%%%%%
-boolean(false, NIL).
+
+%%% <PRIMITIVES> 
+boolean(false).
 boolean(true).
 nullable(null).
 
