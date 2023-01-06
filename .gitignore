@@ -1,3 +1,6 @@
-
 .vscode
 Prolog/testing/
+Lisp/jsonparse.lisp~
+Lisp/#jsonparse.lisp#
+Lisp/testing/
+progetto.code-workspace
