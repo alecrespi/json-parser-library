@@ -61,7 +61,9 @@
                         (cons digested-single-value digested-values) 
                         remaining-unparsed 
                         result-type) ))
-                  ( T (values NIL "ERROR: jsonparse-values" 'error)) )
+                  ( T (values NIL 
+               "ERROR: Syntax Error - Missing closing square bracket or comma"
+                              'error)) )
             (values digested-single-value chewable result-type) ))))
 
 (defun jsonparse-single-value (input)
@@ -131,7 +133,9 @@
                                 (cond ((not (typep key 'string)) 
                                        "Pair-key is not a string")
                                       ((not (eql (second input) 'COLON)) 
-                                       (format NIL "Missing colon after < ~d >" key))
+                                       (format NIL 
+                                               "Missing colon after < ~d >" 
+                                               key))
                                       ( T "Expected value after \:" ) )) 
                    'error) )))
 
@@ -140,10 +144,10 @@
 (defun jsonparse (json) 
   (multiple-value-bind
       (digest error-string result-type)
-      (json-recognizer json)
+      (json-recognizer (json-normalize-string json))
       (cond ((eql result-type 'noerror) digest )
             ((eql result-type 'error) error-string)
-            ( T error-string)) ))
+            ( T "ERROR: Syntax Error")) ))
 
 (defun json-recognizer (input)
   (let ((token (first input)))
@@ -151,19 +155,49 @@
      ((eql token 'BRACE-OPEN) (jsonparse-object input))
       ((eql token 'SQUARE-OPEN) (jsonparse-array input) )
       ( T (values input 
-                  (format NIL "ERROR: Syntax Error - Unexpected token < ~d >" token ) 
+                  (format NIL 
+                        "ERROR: Syntax Error - Unexpected token < ~d >" token) 
                   'error) ) )))
+
+;JSONACCESS
+(defun jsonaccess (json fields)
+  ; handle case fields is a 'string or 'number, than x --> '(x) 
+  (let* ((real-fields (cond ((typep fields 'cons) fields) 
+                            ((typep fields 'null) NIL) 
+                            ( T (cons fields NIL) )))  ; if string or number
+         (key (if (null real-fields) NIL (first real-fields) ))
+         (toptype (if (typep json 'cons) (first json) NIL)))
+    (cond ((null key) json)
+          ((null toptype) "ERROR: Element cannot be accessed")
+          ((and (eql toptype 'JSONOBJ) (typep key 'string)) 
+           (let ((nexthop (jsonobj-get json key)))
+             (if (null nexthop)
+                 (format NIL "ERROR: Cannot access to attribute < ~d >" key)
+                 (jsonaccess nexthop (rest real-fields))) ))
+          ( (and (eql toptype 'JSONARRAY) (typep key 'number))
+           (let ((nexthop (nth key (rest json)))) 
+             (if (null nexthop)
+                 (format NIL "ERROR: Index ~d out of bounds." key)
+                 (jsonaccess nexthop (rest real-fields)) )))
+          ( T (format NIL "ERROR: < ~d > is not a valid identifier" key) ) )))
 
 ; JSONREAD
 (defun jsonread (filename)
   (let ((unparsed (uiop:read-file-string filename)))
-    (jsonparse (json-normalize-string unparsed))
-))
+    (jsonparse unparsed) ))
 
 
+;;; UTILS
+; Returns the value identified by <key> in <jsonobj>, NIL otherwise. 
+; Assuming that <jsonobj> is a list of key-pairs 
+; always headed by CL 'JSONOBJ Symbol
+(defun jsonobj-get (jsonobj key) 
+  (if (eql (first jsonobj) 'JSONOBJ)
+      (let* ((body (rest jsonobj)) (head (first body)))
+        (cond ((null body) NIL)
+              ((string= (first head) key) (second head) )
+              ( T (jsonobj-get (cons 'JSONOBJ (rest body)) key)) ))))
 
-
-; UTILS
 (defun json-normalize-string (toparse) 
    (tokenify-string 
     (replace-all-in-string macro-characters custom-delimiters toparse )))
@@ -186,12 +220,15 @@
    'string ))
 
 (defun replace-all-in-charlist 
-  (targets replacers charlist &optional &key (enable-replace T) (escaped NIL) )
+  (targets replacers charlist &optional &key (enable-replace T) (escaped NIL))
   (let* ((suspect (first charlist)) 
          (target-index (position suspect targets))
          (next-escaped (eql suspect #\\))
          (toggle-enable-replace 
-          (if (and (eql suspect #\") (not escaped)) (not enable-replace ) enable-replace)))
+          (if (and (eql suspect #\") 
+                   (not escaped)) 
+              (not enable-replace ) 
+              enable-replace)))
     (cond ((null charlist) NIL)
           ((or (null target-index) (not enable-replace))
            (cons
@@ -216,5 +253,5 @@
 (defparameter test-path-1 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/input2.json")
 (defparameter test-path-2 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/real1.json")
 
-;(defparameter test1 (json-normalize-string (jsonread test-path-1)) )
+(defparameter test1 (jsonread test-path-1) )
 ;(defparameter test2 (json-normalize-string (jsonread test-path-2)) )
