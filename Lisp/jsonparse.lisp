@@ -24,93 +24,67 @@
 
 (defun jsonparse-array (input)
   (let ((agent (first input)))
-    (cond ((null agent) (values NIL 
-                                "ERROR: Syntax Error - End of String reached" 
-                                'error))
+    (cond ((null agent) (error "ERROR: Syntax Error - End of String reached"))
           ((eql agent 'SQUARE-OPEN) 
            (if (eql (second input) 'SQUARE-CLOSE)
-               (values (cons 'JSONARRAY NIL) (cdr (cdr input)) 'noerror )
+               (values (cons 'JSONARRAY NIL) (cdr (cdr input)))
                (multiple-value-bind
-                   (array-values chewable result-type)
+                   (array-values chewable)
                    (jsonparse-values (rest input))
-                   (if (eql result-type 'noerror)
-                       (values 
-                        (cons 'JSONARRAY array-values) 
-                        chewable 
-                        result-type)
-                       (values array-values chewable result-type) ) ) )))))
+                   (values (cons 'JSONARRAY array-values) chewable)) )))))
 
-(defun jsonparse-values (input) 
+(defun jsonparse-values (input)
   (let ((element (first input)))
     (multiple-value-bind
-        (digested-single-value chewable result-type)
+        (digested-single-value chewable)
         (jsonparse-single-value input)
-        (if (eql result-type 'noerror)
-            (cond ((eql (first chewable) 'SQUARE-CLOSE)
-                   (values 
-                    (cons digested-single-value NIL) 
-                    (rest chewable) 
-                    result-type))
-                  ((eql (first chewable) 'COMMA)
-                   (multiple-value-bind
-                       (digested-values 
-                        remaining-unparsed 
-                        recursive-result-type)
-                       (jsonparse-values (rest chewable))
-                       (values 
-                        (cons digested-single-value digested-values) 
-                        remaining-unparsed 
-                        result-type) ))
-                  ( T (values NIL 
-               "ERROR: Syntax Error - Missing closing square bracket or comma"
-                              'error)) )
-            (values digested-single-value chewable result-type) ))))
+        (cond ((eql (first chewable) 'SQUARE-CLOSE)
+               (values 
+                (cons digested-single-value NIL)
+                (rest chewable)))
+              ((eql (first chewable) 'COMMA)
+               (multiple-value-bind
+                   (digested-values 
+                    remaining-unparsed)
+                   (jsonparse-values (rest chewable))
+                 (values 
+                  (cons digested-single-value digested-values)
+                  remaining-unparsed) ))
+              ( T (error "ERROR: Syntax Error - Missing closing square bracket or comma"))))))
 
 (defun jsonparse-single-value (input)
   (let ((element (first input)))
     (if (is-json-primitive element) 
-        (values element (rest input) 'noerror)
+        (values element (rest input))
         (json-recognizer input) )))
 
 (defun jsonparse-object (input)
   (let ((agent (first input)))
-    (cond ((null agent) (values NIL 
-                                "ERROR: Syntax Error - End of String reached" 
-                                'error))
+    (cond ((null agent) (error "ERROR: Syntax Error - End of String reached"))
           ((eql agent 'BRACE-OPEN)
            (if (eql (second input) 'BRACE-CLOSE)
-               (values (cons 'JSONOBJ NIL) (cdr (cdr input)) 'noerror)
+               (values (cons 'JSONOBJ NIL) (cdr (cdr input)))
                (multiple-value-bind
-                   (members chewable result-type)
+                   (members chewable)
                    (jsonparse-members (rest input))
-                   (if (eql result-type 'noerror)
-                       (values (cons 'JSONOBJ members) chewable result-type)
-                       (values members chewable result-type) ))) )) ))
+                 (values (cons 'JSONOBJ members) chewable)))))))
 
 (defun jsonparse-members (input)
   (multiple-value-bind 
-      (digested-pair chewable result-type)
+      (digested-pair chewable)
       (jsonparse-pair input)
-      (if (eql result-type 'noerror)
-          (cond ((eql (first chewable) 'COMMA)
-                 (multiple-value-bind 
-                     (digested-members 
-                      remaining-unparsed 
-                      recursive-result-type)
-                     (jsonparse-members (rest chewable))
-                     (values 
-                      (cons digested-pair digested-members) 
-                      remaining-unparsed 
-                      recursive-result-type) ))
-                ((eql (first chewable) 'BRACE-CLOSE) 
-                 (values (cons digested-pair NIL) 
-                 (rest chewable) 
-                 'noerror))
-                (T (values 
-                    NIL 
-                    "ERROR: Syntax Error -  Missing closing brace or comma" 
-                    'error)))
-          (values digested-pair chewable result-type))))
+    (cond ((eql (first chewable) 'COMMA)
+           (multiple-value-bind 
+               (digested-members 
+                remaining-unparsed)
+               (jsonparse-members (rest chewable))
+             (values 
+              (cons digested-pair digested-members) 
+              remaining-unparsed) ))
+          ((eql (first chewable) 'BRACE-CLOSE) 
+           (values (cons digested-pair NIL) 
+                   (rest chewable)))
+          (T (error "ERROR: Syntax Error -  Missing closing brace or comma")))))
 
 (defun jsonparse-pair (input) 
   (let ((key (first input)))
@@ -120,44 +94,39 @@
            (if (is-json-primitive (third input)) 
                (values 
                 (list key (third input)) 
-                (cdr (cdr (cdr input))) 'noerror )
+                (cdr (cdr (cdr input))))
                (multiple-value-bind
-                   (recognized chewable result-type) 
+                   (recognized chewable) 
                    (json-recognizer (cdr (cdr input)))
-                   (if (eql result-type 'noerror)
-                       (values (list key recognized) chewable result-type )
-                       (values recognized chewable result-type) ) ))
-           (values NIL 
-                   (concatenate 'string
-                                "ERROR: Syntax Error - "
-                                (cond ((not (typep key 'string)) 
-                                       "Pair-key is not a string")
-                                      ((not (eql (second input) 'COLON)) 
-                                       (format NIL 
-                                               "Missing colon after < ~d >" 
-                                               key))
-                                      ( T "Expected value after \:" ) )) 
-                   'error) )))
+                 (values (list key recognized) chewable)))
+           (error (concatenate 'string
+                               "ERROR: Syntax Error - "
+                               (cond ((not (typep key 'string)) 
+                                      "Pair-key is not a string")
+                                     ((not (eql (second input) 'COLON)) 
+                                      (format NIL 
+                                              "Missing colon after < ~d >" 
+                                              key))
+                                     ( T "Expected value after \:" )))))))
 
 
 ; JSONPARSE
 (defun jsonparse (json) 
   (multiple-value-bind
-      (digest error-string result-type)
+      (digest empty-buffer)
       (json-recognizer (json-normalize-string json))
-      (cond ((eql result-type 'noerror) digest )
-            ((eql result-type 'error) (error error-string))
-            ( T "ERROR: Syntax Error")) ))
+    (if (null empty-buffer)
+        digest
+      (error "ERROR: Syntax Error"))))
 
 (defun json-recognizer (input)
   (let ((token (first input)))
     (cond 
      ((eql token 'BRACE-OPEN) (jsonparse-object input))
       ((eql token 'SQUARE-OPEN) (jsonparse-array input) )
-      ( T (values input 
-                  (format NIL 
-                        "ERROR: Syntax Error - Unexpected token < ~d >" token) 
-                  'error) ) )))
+      ( T  (error (format NIL 
+                          "ERROR: Syntax Error - Unexpected token < ~d >" 
+                          token))))))
 
 ;JSONACCESS
 (defun jsonaccess (json &rest fields)
@@ -193,14 +162,27 @@
 (defun string-dumping-json (json)
   (let ((toptype (if (typep json 'cons) (first json)))
         (dump-members (lambda (member)
-                        (if (is-json-primitive (second member))
-                            (format nil "~s:~s" (first member) (second member))
-                            (format nil "~s:~d" (first member) 
-                                    (string-dumping-json (second member))) )))
+                        (cond ((and (is-json-primitive (second member))
+                                    (not (typep (second member) 'symbol)))
+                               (format nil "~s:~s" (first member) (second member)))
+                              ; i symbols sono formattati in uppercase
+                              ; nativamente in LISP
+                              ((typep (second member) 'symbol) 
+                               (format nil "~s:~d"
+                                       (first member)
+                                       (string-downcase 
+                                        (string 
+                                         (second member)))))
+                              ( T (format nil "~s:~d" (first member) 
+                                          (string-dumping-json 
+                                           (second member)))) )))
         (dump-values (lambda (value)
-                       (if (is-json-primitive value) 
-                           (format nil "~s" value)
-                           (format nil "~d" (string-dumping-json value))))))
+                       (cond ((and (is-json-primitive value)
+                                   (not (typep value 'symbol)))
+                              (format nil "~s" value))
+                             ((typep value 'symbol) 
+                              (format nil "~d" (string-downcase (string value)) ))
+                             ( T (format nil "~d" (string-dumping-json value)))))))
     (cond ((null toptype) "ERROR")
           ((eql toptype 'JSONOBJ) 
            (concatenate 'string 
@@ -285,8 +267,8 @@
                           (join (rest list) delimiter))))))
 
 ; PARAMETERS - TEST
-(defparameter test-path-1 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/input2.json")
-(defparameter test-path-2 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/real1.json")
-(defparameter test-path-output "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/output.json")
-(defparameter test1 (jsonread test-path-1) )
+(defparameter tp1 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/input1.json")
+(defparameter tp2 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/real1.json")
+(defparameter out-stream "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/output.json")
+;(defparameter test1 (jsonread test-path-1) )
 ;(defparameter test2 (json-normalize-string (jsonread test-path-2)) )
