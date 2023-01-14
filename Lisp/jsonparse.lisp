@@ -146,7 +146,7 @@
       (digest error-string result-type)
       (json-recognizer (json-normalize-string json))
       (cond ((eql result-type 'noerror) digest )
-            ((eql result-type 'error) error-string)
+            ((eql result-type 'error) (error error-string))
             ( T "ERROR: Syntax Error")) ))
 
 (defun json-recognizer (input)
@@ -183,7 +183,12 @@
 
 ; JSONDUMP
 (defun jsondump (json filename)
-  () )
+  (with-open-file (out filename 
+                       :direction :output
+                       :if-exists :supersede
+                       :if-does-not-exist :create)
+    (format out "~d" (string-dumping-json json))) 
+  filename)
 
 (defun string-dumping-json (json)
   (let ((toptype (if (typep json 'cons) (first json)))
@@ -204,9 +209,9 @@
                         "}")) 
           ((eql toptype 'JSONARRAY)
            (concatenate 'string 
-                        "{" 
+                        "[" 
                         (join (mapcar dump-values (rest json)) ",")
-                        "}"))) ))
+                        "]"))) ))
 
 ;;; UTILS
 ; Returns the value identified by <key> in <jsonobj>, NIL otherwise. 
@@ -282,6 +287,6 @@
 ; PARAMETERS - TEST
 (defparameter test-path-1 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/input2.json")
 (defparameter test-path-2 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/real1.json")
-
+(defparameter test-path-output "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/output.json")
 (defparameter test1 (jsonread test-path-1) )
 ;(defparameter test2 (json-normalize-string (jsonread test-path-2)) )
