@@ -160,32 +160,53 @@
                   'error) ) )))
 
 ;JSONACCESS
-(defun jsonaccess (json fields)
-  ; handle case fields is a 'string or 'number, than x --> '(x) 
-  (let* ((real-fields (cond ((typep fields 'cons) fields) 
-                            ((typep fields 'null) NIL) 
-                            ( T (cons fields NIL) )))  ; if string or number
-         (key (if (null real-fields) NIL (first real-fields) ))
-         (toptype (if (typep json 'cons) (first json) NIL)))
+(defun jsonaccess (json &rest fields)
+  (let ((key (first fields))
+        (toptype (if (typep json 'cons) (first json) )))
     (cond ((null key) json)
           ((null toptype) "ERROR: Element cannot be accessed")
           ((and (eql toptype 'JSONOBJ) (typep key 'string)) 
            (let ((nexthop (jsonobj-get json key)))
              (if (null nexthop)
                  (format NIL "ERROR: Cannot access to attribute < ~d >" key)
-                 (jsonaccess nexthop (rest real-fields))) ))
+                 (apply 'jsonaccess (cons nexthop (rest fields)))) ))
           ( (and (eql toptype 'JSONARRAY) (typep key 'number))
            (let ((nexthop (nth key (rest json)))) 
              (if (null nexthop)
                  (format NIL "ERROR: Index ~d out of bounds." key)
-                 (jsonaccess nexthop (rest real-fields)) )))
-          ( T (format NIL "ERROR: < ~d > is not a valid identifier" key) ) )))
-
+                 (apply 'jsonaccess (cons nexthop (rest fields))) )))
+          ( T (format NIL "ERROR: < ~d > is not a valid identifier" key)) )))
 ; JSONREAD
 (defun jsonread (filename)
   (let ((unparsed (uiop:read-file-string filename)))
     (jsonparse unparsed) ))
 
+; JSONDUMP
+(defun jsondump (json filename)
+  () )
+
+(defun string-dumping-json (json)
+  (let ((toptype (if (typep json 'cons) (first json)))
+        (dump-members (lambda (member)
+                        (if (is-json-primitive (second member))
+                            (format nil "~s:~s" (first member) (second member))
+                            (format nil "~s:~d" (first member) 
+                                    (string-dumping-json (second member))) )))
+        (dump-values (lambda (value)
+                       (if (is-json-primitive value) 
+                           (format nil "~s" value)
+                           (format nil "~d" (string-dumping-json value))))))
+    (cond ((null toptype) "ERROR")
+          ((eql toptype 'JSONOBJ) 
+           (concatenate 'string 
+                        "{" 
+                        (join (mapcar dump-members (rest json)) ",")
+                        "}")) 
+          ((eql toptype 'JSONARRAY)
+           (concatenate 'string 
+                        "{" 
+                        (join (mapcar dump-values (rest json)) ",")
+                        "}"))) ))
 
 ;;; UTILS
 ; Returns the value identified by <key> in <jsonobj>, NIL otherwise. 
@@ -248,6 +269,15 @@
                             (rest charlist) 
                             :enable-replace toggle-enable-replace
                             :escaped next-escaped))) ) ))
+
+(defun join (list delimiter)
+  (if list
+      (format nil "~d~d" 
+              (first list)
+              (if (null (rest list)) ""
+                  (format nil "~d~d" 
+                          delimiter
+                          (join (rest list) delimiter))))))
 
 ; PARAMETERS - TEST
 (defparameter test-path-1 "C:/users/Asus/desktop/uni/2° anno/linguaggi di programmazione/progetto/lisp/testing/input2.json")
